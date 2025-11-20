@@ -160,4 +160,4 @@ for c = 1:nCol
 end
 sgtitle('Picchi massimi per ciascuna colonna');
 
-x = 100;
+x=100;
