@@ -158,7 +158,7 @@ xlim([0 2*length(accIdx)+1]);
 xticks(1:2:2*length(accIdx));
 xticklabels(colNamesData(accIdx));
 xtickangle(45);
-ylabel('Valore medio'); title('Accelerazioni - Media'); grid on;
+ylabel('Valore medio'); title('Medie'); grid on;
 
 % Massimo
 subplot(2,1,2); hold on;
@@ -170,4 +170,4 @@ xlim([0 2*length(accIdx)+1]);
 xticks(1:2:2*length(accIdx));
 xticklabels(colNamesData(accIdx));
 xtickangle(45);
-ylabel('Valore massimo'); title('Accelerazioni - Massimo'); grid on;
+ylabel('Valore massimo'); title('Massimi'); grid on;
