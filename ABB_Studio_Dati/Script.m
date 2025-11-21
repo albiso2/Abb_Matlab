@@ -1,4 +1,4 @@
-%% --- SCRIPT DI CONFRONTO COLONNE CON TEMPO INGRESSO ---
+% --- SCRIPT DI CONFRONTO COLONNE CON TEMPO INGRESSO ---
 clear all; clc;
 
 %% --- Caricamento dati ---
