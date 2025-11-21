@@ -136,3 +136,99 @@ xticks(1:2:2*length(accIdx));
 xticklabels(colNamesData(accIdx));
 xtickangle(45);
 ylabel('Valore massimo'); title('Massimi'); grid on;
+
+
+%% --- ANALISI AUTOMATICA AVANZATA ---
+
+% 1. Statistiche base
+disp('--- Statistiche base ---');
+for idx = 1:nCol
+    fprintf('\nColonna: %s\n', colNamesData{idx});
+    fprintf('Media File1: %.3f, File2: %.3f\n', mediaFile1(idx), mediaFile2(idx));
+    fprintf('Max File1: %.3f, File2: %.3f\n', maxFile1(idx), maxFile2(idx));
+    fprintf('Min File1: %.3f, File2: %.3f\n', min(file1(:,colsToKeep(idx))), min(file2(:,colsToKeep(idx))));
+    fprintf('Deviazione Std File1: %.3f, File2: %.3f\n', std(file1(:,colsToKeep(idx)),'omitnan'), std(file2(:,colsToKeep(idx)),'omitnan'));
+end
+
+% 2. Heatmap delle accelerazioni
+figure('Name','Heatmap File1','NumberTitle','off');
+imagesc(tempo, 1:nCol, file1(:,colsToKeep)');
+colorbar;
+yticks(1:nCol); yticklabels(colNamesData);
+xlabel('Tempo'); ylabel('Colonna'); title('Heatmap File1');
+
+figure('Name','Heatmap File2','NumberTitle','off');
+imagesc(tempo, 1:nCol, file2(:,colsToKeep)');
+colorbar;
+yticks(1:nCol); yticklabels(colNamesData);
+xlabel('Tempo'); ylabel('Colonna'); title('Heatmap File2');
+
+%% --- Picchi massimi e correlazioni --- 
+fprintf('--- Correlazioni File1 vs File2 ---\n');
+
+figure('Name','Picchi Massimi','NumberTitle','off');
+
+for idx = 1:nCol
+    c = colsToKeep(idx);
+    col1 = file1(:,c);
+    col2 = file2(:,c);
+
+    % --- Calcolo soglia per i picchi ---
+    thresh1 = mean(col1,'omitnan') + std(col1,'omitnan');
+    thresh2 = mean(col2,'omitnan') + std(col2,'omitnan');
+
+    % --- Trova picchi solo se ci sono valori sopra la soglia ---
+    if any(col1 > thresh1)
+        [pks1, locs1] = findpeaks(col1, 'MinPeakHeight', thresh1);
+    else
+        pks1 = []; locs1 = [];
+    end
+    if any(col2 > thresh2)
+        [pks2, locs2] = findpeaks(col2, 'MinPeakHeight', thresh2);
+    else
+        pks2 = []; locs2 = [];
+    end
+
+    % --- Plot ---
+    subplot(ceil(nCol/2),2,idx); hold on;
+    h = [];
+    h(1) = plot(tempo, col1, '-b','DisplayName','File1');
+    if ~isempty(pks1)
+        h(2) = plot(tempo(locs1), pks1, 'ob','MarkerFaceColor','b','DisplayName','Picchi File1');
+    end
+    h(end+1) = plot(tempo, col2, '-r','DisplayName','File2');
+    if ~isempty(pks2)
+        h(end+1) = plot(tempo(locs2), pks2, 'or','MarkerFaceColor','r','DisplayName','Picchi File2');
+    end
+    xlabel('Tempo'); ylabel('Valore'); title(colNamesData{idx}); grid on;
+    legend(h,'Location','best');
+
+    % --- Correlazione ---
+    x = col1;
+    y = col2;
+    % Calcola correlazione ignorando righe con NaN
+R = corr(x, y, 'Rows', 'complete');  
+
+% Se la correlazione non è definita (ad esempio tutti i valori uguali), impostala a 0
+if isempty(R) || isnan(R)
+    corrVal = 0;
+else
+    corrVal = R;
+end
+fprintf('%s: Corr = %.3f\n', colNamesData{idx}, corrVal);
+end
+
+sgtitle('Picchi massimi per ciascuna colonna');
+
+% 5. Analisi in frequenza (FFT) - esempio prima accelerazione
+Fs = 1/mean(diff(tempo)); % frequenza di campionamento
+figure('Name','FFT esempio accelerazione','NumberTitle','off'); hold on;
+Y1 = fft(file1(:,colsToKeep(accIdx(1))));
+Y2 = fft(file2(:,colsToKeep(accIdx(1))));
+f = (0:length(Y1)-1)*Fs/length(Y1);
+plot(f, abs(Y1), 'b'); 
+plot(f, abs(Y2), 'r');
+xlabel('Frequenza [Hz]'); ylabel('Ampiezza'); 
+legend('File1','File2'); title(['FFT: ' colNamesData{accIdx(1)}]);
+xlim([0 Fs/2]); % fino alla Nyquist
+grid on;
