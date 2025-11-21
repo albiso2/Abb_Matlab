@@ -9,6 +9,9 @@ file2 = CellaR10001500;
 
 %prova git
 
+
+
+
 %% --- Conversione robusta table/cell -> numeric ---
 file1_num = zeros(size(file1));
 file2_num = zeros(size(file2));
