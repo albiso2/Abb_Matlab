@@ -1,66 +1,25 @@
-% --- SCRIPT DI CONFRONTO COLONNE CON TEMPO INGRESSO ---
-clear all; clc;
-
-%% --- Caricamento dati ---
-load('dati.mat');  % contiene CellaAP10001000 e CellaR10001500
-
-file1 = CellaAP10001000;
-file2 = CellaR10001500;
-
-
-%% --- Conversione robusta table/cell -> numeric ---
-file1_num = zeros(size(file1));
-file2_num = zeros(size(file2));
-
-for c = 1:size(file1,2)
-    % --- File1 ---
-    if istable(file1)
-        col = file1{:,c};  % usa {} per estrarre contenuto numerico/cella
-    else
-        col = file1(:,c);
-    end
-    
-    if iscell(col)
-        colNum = nan(size(col));
-        for k = 1:numel(col)
-            val = col{k};
-            if isnumeric(val)
-                colNum(k) = val;
-            elseif ischar(val) || isstring(val)
-                colNum(k) = str2double(val);
-            end
-        end
-    else
-        colNum = double(col);
-    end
-    file1_num(:,c) = colNum;
-    
-    % --- File2 ---
-    if istable(file2)
-        col = file2{:,c};
-    else
-        col = file2(:,c);
-    end
-    
-    if iscell(col)
-        colNum = nan(size(col));
-        for k = 1:numel(col)
-            val = col{k};
-            if isnumeric(val)
-                colNum(k) = val;
-            elseif ischar(val) || isstring(val)
-                colNum(k) = str2double(val);
-            end
-        end
-    else
-        colNum = double(col);
-    end
-    file2_num(:,c) = colNum;
+%% --- Seleziona cartella ---
+clear all; clc; close all;
+folderPath = uigetdir(pwd,'Seleziona la cartella con i dati');
+if folderPath == 0
+    error('Cartella non selezionata');
 end
 
-% Sostituisci file1 e file2 con array numerici
-file1 = file1_num;
-file2 = file2_num;
+% Trova i file Excel
+files = dir(fullfile(folderPath,'*.xlsx')); % o '*.xls'
+if length(files) < 2
+    error('Serve almeno 2 file Excel nella cartella');
+end
+
+% Prendi i due file (qui puoi filtrare per nome)
+file1Path = fullfile(folderPath, files(1).name);
+file2Path = fullfile(folderPath, files(2).name);
+
+%% --- Leggi i file Excel ---
+
+file1 = readmatrix(file1Path);
+file2 = readmatrix(file2Path);
+
 
 %% --- Estrazione tempo ---
 tempo1 = file1(:,1);
@@ -72,15 +31,20 @@ file1 = file1(idx1,:);
 file2 = file2(idx2,:);
 tempo = tempi_comuni;
 
-%% --- Colonne da considerare ---
-colNames = {'Energia Totale','Potenza Motore','Acc Lineare IRB4600_40',...
-            'Massima Accelerazione Lineare IRB4600_40','Acc Lineare TROB2',...
-            'Massima Acc Lineare TROB2'};
+%% --- Colonne da considerare (automatica) ---
+colNames = {'Energia Totale','Potenza Motore','AL IRB4600_40', ...
+            'MAL-IRB4600-40','AL IRB4600-20-IRB2600ID', ...
+            'MAL TROB2'};
 
-colsToKeep = 2:size(file1,2);   % tutte tranne tempo
-colsToKeep(colsToKeep==7) = []; % escludi eventuale colonna 7
-colNamesData = colNames(colsToKeep-1);
-nCol = length(colNamesData);
+nTotalCols = length(colNames);
+
+% Colonne da escludere (modificabile all'inizio dello script)
+colsToExclude = [5 7];   % ad esempio escludi colonne 5 e 7
+
+% Colonne da tenere
+colsToKeep = setdiff(2:nTotalCols, colsToExclude);  % sempre tranne la colonna tempo (1)
+colNamesData = colNames(colsToKeep-1);             % nomi delle colonne considerate
+nCol = length(colsToKeep);
 
 %% --- Plot serie temporali ---
 figure('Name','Confronto Serie Temporali','NumberTitle','off');
