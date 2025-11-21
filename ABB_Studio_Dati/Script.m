@@ -1,6 +1,6 @@
 %% --- SCRIPT DI CONFRONTO COLONNE CON TEMPO INGRESSO ---
 clear all;
-load('miei_dati.mat');  % ricarica Data1 e Data2
+load('dati.mat');  % ricarica Data1 e Data2
 
 % --- Inizio script ---
 file1 = Data1; % sostituire con il nome reale
