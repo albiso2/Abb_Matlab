@@ -7,10 +7,6 @@ load('dati.mat');  % contiene CellaAP10001000 e CellaR10001500
 file1 = CellaAP10001000;
 file2 = CellaR10001500;
 
-%prova git
-
-
-
 
 %% --- Conversione robusta table/cell -> numeric ---
 file1_num = zeros(size(file1));
