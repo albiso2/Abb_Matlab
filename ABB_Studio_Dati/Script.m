@@ -3,8 +3,8 @@ clear all;
 load('dati.mat');  % ricarica Data1 e Data2
 
 % --- Inizio script ---
-file1 = Data1; % sostituire con il nome reale
-file2 = Data2;
+file1 = CellaAP10001000; % sostituire con il nome reale
+file2 = CellaR10001500;
 
 % Conversione in array numerici
 file1 = convertArrayToNumeric(file1);
@@ -14,150 +14,85 @@ file2 = convertArrayToNumeric(file2);
 tempo1 = file1(:,1);
 tempo2 = file2(:,1);
 
-% --- Allineamento file2 sui tempi di file1 ---
-if length(tempo1) ~= length(tempo2) || any(tempo1 ~= tempo2)
-    file2_interp = zeros(length(tempo1), size(file2,2));
-    file2_interp(:,1) = tempo1; % tempo allineato
+%% -------------------------------------------------------
+% --- Allineamento senza modificare i dati ---
+% Trova i tempi presenti in entrambi i file
+[tempi_comuni, idx1, idx2] = intersect(tempo1, tempo2);
 
-    for k = 2:size(file2,2)
-        file2_interp(:,k) = interp1(tempo2, file2(:,k), tempo1, 'linear', 'extrap');
-    end
+% Riduci i dataset solo ai tempi comuni
+file1 = file1(idx1, :);
+file2 = file2(idx2, :);
 
-    file2 = file2_interp; % ora file2 ha la stessa dimensione di file1
-    tempo2 = tempo1;      % allineiamo tempo2
-end
+% Aggiorna tempo1 e tempo2
+tempo1 = tempi_comuni;
+tempo2 = tempi_comuni;
 
-%% Escludiamo le colonne 4 e 7 (colonne da scartare)
-% Nomi colonne
-colNames = {'Energia Totale','Potenza Motore','Max.Acc LineareR1','Massima Accelerazione in Lineare IRB1','ColD', 'Massima Accelerazione Lineare in Universale IRB4600 40'};
+%% Escludiamo colonne da scartare (qui solo colonna 7 se esiste)
+colNames = {'Energia Totale','Potenza Motore','Acc Lineare IRB4600_40','Massima Accelerazione Lineare IRB4600_40','Acc Lineare TROB2', 'Massima Acc Lineare TROB2'};
 
-colsToKeep = setdiff(2:length(colNames), [4,7]);  % 2 perché colonna 1 = tempo
-colNamesData = colNames(colsToKeep);
+colsToKeep = 2:size(file1,2);   % tutte le colonne tranne il tempo
+colsToKeep(colsToKeep==7) = []; % escludi colonna 7 se presente
+
+% map per nomi
+colNamesData = colNames(colsToKeep-1); % -1 perché colNames non ha colonna tempo
 nCol = length(colNamesData);
 
-% --- Plot serie temporali ---  
-figure;
+%% --- Plot serie temporali ---
+figure('Name','Confronto Serie Temporali','NumberTitle','off');
 for idx = 1:nCol
-    c = colsToKeep(idx);  % colonna reale nel file
+    c = colsToKeep(idx);  % colonna reale in file1/file2
     subplot(ceil(nCol/2),2,idx);
     plot(tempo1, file1(:,c), '-o'); hold on;
-    plot(tempo1, file2(:,c), '-x');
+    plot(tempo2, file2(:,c), '-x');
     xlabel('Tempo'); ylabel('Valore');
     legend('File1','File2');
-    title(colNames{c}); 
+    title(colNamesData{idx}); 
     grid on;
 end
 sgtitle('Confronto colonne tra file1 e file2');
 
-
-%% --- Analisi aggiuntiva: Medie, Massimi e Picchi ---
-
-% Preallocazione
+%% --- Calcolo medie e massimi ---
 mediaFile1 = zeros(1,nCol);
 mediaFile2 = zeros(1,nCol);
 maxFile1   = zeros(1,nCol);
 maxFile2   = zeros(1,nCol);
 
-% Calcolo medie e massimi
-for c = 1:nCol
-    col1 = file1(:,c+1);
-    col2 = file2(:,c+1);
+for idx = 1:nCol
+    c = colsToKeep(idx);   % colonna reale in file1/file2
+    col1 = file1(:,c);
+    col2 = file2(:,c);
     
-    mediaFile1(c) = mean(col1);
-    mediaFile2(c) = mean(col2);
+    % Calcolo medie ignorando eventuali NaN
+    mediaFile1(idx) = mean(col1,'omitnan');
+    mediaFile2(idx) = mean(col2,'omitnan');
     
-    maxFile1(c) = max(col1);
-    maxFile2(c) = max(col2);
+    % Massimi rimangono invariati
+    maxFile1(idx) = max(col1);
+    maxFile2(idx) = max(col2);
 end
 
-%% --- Grafico medie e massimi ---
+%% --- Grafico barre medie e massimi corretto ---
 figure('Name','Statistiche Medie e Massimi','NumberTitle','off');
 
-% Media
+
+% Matrice barre: ogni riga = file, ogni colonna = colonna dati
+barDataMedia = [mediaFile1; mediaFile2];  % 2 x nCol
+barDataMax   = [maxFile1; maxFile2];
+
+% --- Media ---
 subplot(2,1,1);
-bar([mediaFile1; mediaFile2]');
+bar(barDataMedia');   % trasponi in modo che ogni gruppo di barre sia una colonna dei dati
 set(gca,'XTickLabel', colNamesData);
 ylabel('Valore medio');
 legend('File1','File2');
 title('Confronto valori medi');
 grid on;
 
-% Massimo
+% --- Massimo ---
 subplot(2,1,2);
-bar([maxFile1; maxFile2]');
+bar(barDataMax');
 set(gca,'XTickLabel', colNamesData);
 ylabel('Valore massimo');
 legend('File1','File2');
 title('Confronto valori massimi');
 grid on;
-
-%% --- Analisi aggiuntiva: Valori medi e picchi massimi ---
-
-% Preallocazione
-mediaFile1 = zeros(1,nCol);
-mediaFile2 = zeros(1,nCol);
-maxFile1   = zeros(1,nCol);
-maxFile2   = zeros(1,nCol);
-
-% Calcolo medie e picchi massimi
-for c = 1:nCol
-    col1 = file1(:,c+1);
-    col2 = file2(:,c+1);
-    
-    mediaFile1(c) = mean(col1);
-    mediaFile2(c) = mean(col2);
-    
-    [maxFile1(c), idx1] = max(col1); % picco massimo File1
-    [maxFile2(c), idx2] = max(col2); % picco massimo File2
-end
-
-%% --- Grafico medie e massimi ---
-figure('Name','Statistiche Medie e Massimi','NumberTitle','off');
-
-% Media
-subplot(2,1,1);
-bar([mediaFile1; mediaFile2]');
-set(gca,'XTickLabel', colNamesData);
-ylabel('Valore medio');
-legend('File1','File2');
-title('Confronto valori medi');
-grid on;
-
-% Picchi massimi
-subplot(2,1,2);
-bar([maxFile1; maxFile2]');
-set(gca,'XTickLabel', colNamesData);
-ylabel('Valore massimo');
-legend('File1','File2');
-title('Confronto picchi massimi');
-grid on;
-
-%% --- Grafico serie con picchi massimi evidenziati ---
-figure('Name','Picchi massimi colonne','NumberTitle','off');
-
-for c = 1:nCol
-    subplot(ceil(nCol/2),2,c);
-    
-    col1 = file1(:,c+1);
-    col2 = file2(:,c+1);
-    
-    % Trova indice del picco massimo
-    [pks1, idx1] = max(col1);
-    [pks2, idx2] = max(col2);
-    
-    % Plotta serie temporali
-    plot(tempo1, col1, '-o'); hold on;
-    plot(tempo1, col2, '-x');
-    
-    % Evidenzia picchi massimi
-    plot(tempo1(idx1), pks1, 'ro', 'MarkerFaceColor','r', 'MarkerSize',8);
-    plot(tempo1(idx2), pks2, 'go', 'MarkerFaceColor','g', 'MarkerSize',8);
-    
-    xlabel('Tempo'); ylabel('Valore');
-    legend('File1','File2','Picco massimo File1','Picco massimo File2');
-    title(colNamesData{c});
-    grid on;
-end
-sgtitle('Picchi massimi per ciascuna colonna');
-
-x=100;
