@@ -221,14 +221,29 @@ end
 sgtitle('Picchi massimi per ciascuna colonna');
 
 % 5. Analisi in frequenza (FFT) - esempio prima accelerazione
-Fs = 1/mean(diff(tempo)); % frequenza di campionamento
+Fs = 1/mean(diff(tempo)); % frequenza di campionamento in Hz
+col1 = file1(:,colsToKeep(accIdx(1)));
+col2 = file2(:,colsToKeep(accIdx(1)));
+
+% --- Rimuovo media per eliminare picco DC ---
+col1_detrended = detrend(col1);  % rimuove offset
+col2_detrended = detrend(col2);
+
+% --- FFT ---
+L = length(col1_detrended);
+Y1 = fft(col1_detrended);
+Y2 = fft(col2_detrended);
+
+% --- Frequenze fino a Nyquist ---
+f = (0:floor(L/2))*(Fs/L);
+Y1_mag = abs(Y1(1:floor(L/2)+1));
+Y2_mag = abs(Y2(1:floor(L/2)+1));
+
+% --- Plot ---
 figure('Name','FFT esempio accelerazione','NumberTitle','off'); hold on;
-Y1 = fft(file1(:,colsToKeep(accIdx(1))));
-Y2 = fft(file2(:,colsToKeep(accIdx(1))));
-f = (0:length(Y1)-1)*Fs/length(Y1);
-plot(f, abs(Y1), 'b'); 
-plot(f, abs(Y2), 'r');
+plot(f, Y1_mag, 'b', 'LineWidth', 1.2);
+plot(f, Y2_mag, 'r', 'LineWidth', 1.2);
 xlabel('Frequenza [Hz]'); ylabel('Ampiezza'); 
-legend('File1','File2'); title(['FFT: ' colNamesData{accIdx(1)}]);
-xlim([0 Fs/2]); % fino alla Nyquist
+legend('File1','File2'); 
+title(['FFT: ' colNamesData{accIdx(1)}]);
 grid on;
