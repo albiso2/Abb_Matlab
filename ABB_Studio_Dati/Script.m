@@ -140,6 +140,19 @@ for idx = 1:nCol
 end
 sgtitle('Picchi Massimi per ciascuna colonna');
 
+%% --- Heatmap delle accelerazioni (File1 e File2) ---
+figure('Name','Heatmap File1','NumberTitle','off');
+imagesc(tempo, 1:nCol, file1(:,colsToKeep)');
+colorbar;
+yticks(1:nCol); yticklabels(colNamesData);
+xlabel('Tempo'); ylabel('Colonna'); title('Heatmap File1');
+
+figure('Name','Heatmap File2','NumberTitle','off');
+imagesc(tempo, 1:nCol, file2(:,colsToKeep)');
+colorbar;
+yticks(1:nCol); yticklabels(colNamesData);
+xlabel('Tempo'); ylabel('Colonna'); title('Heatmap File2');
+
 %% --- FFT su POTENZA MOTORE (File1 e File2) ---
 idxPower = find(strcmp(colNamesData,'Potenza Motore'));
 
@@ -173,49 +186,56 @@ if ~isempty(idxPower)
     legend('File1','File2');
 end
 
-%% --- BLOCCO FINALE: Dashboard + Statistiche per Command Window ---
-figure('Name','Dashboard Completa','NumberTitle','off','Units','normalized','Position',[0 0 1 1]);
-tiled = tiledlayout(4,2,'TileSpacing','compact','Padding','compact');
-title(tiled,'Dashboard completa dell’analisi');
+%% --- Dashboard interattivo a step ---
+figure('Name','Dashboard Interattivo','NumberTitle','off','Units','normalized','Position',[0 0 1 1]);
 
-% --- Serie temporali ---
-for idx=1:nCol
-    nexttile; 
-    plot(tempo,file1(:,colsToKeep(idx)),'-o'); hold on; 
-    plot(tempo,file2(:,colsToKeep(idx)),'-x'); 
-    title(['Serie: ' colNamesData{idx}]); grid on;
-    legend('File1','File2');
+for idx = 1:nCol
+    clf; % pulisce la figura ad ogni step
+    plot(tempo, file1(:,colsToKeep(idx)), '-o', 'LineWidth', 1.2); hold on;
+    plot(tempo, file2(:,colsToKeep(idx)), '-x', 'LineWidth', 1.2);
+    xlabel('Tempo'); ylabel('Valore');
+    title(['Serie Temporale: ' colNamesData{idx}]);
+    legend('File1','File2','Location','best');
+    grid on;
+    
+    % Attende pressione tasto Enter
+    disp(['Premi Enter per vedere il grafico successivo (' colNamesData{idx} ')...']);
+    pause; % attende input da tastiera
 end
 
-% --- Medie (pallini) ---
-nexttile; hold on;
-for i = 1:nCol
-    plot(i-0.2, mediaFile1(i), 'o', 'MarkerFaceColor', colorFile1, 'MarkerEdgeColor', colorFile1, 'MarkerSize', 8);
-    plot(i+0.2, mediaFile2(i), 'o', 'MarkerFaceColor', colorFile2, 'MarkerEdgeColor', colorFile2, 'MarkerSize', 8);
-end
-xlim([0 nCol+1]);
-xticks(1:nCol); xticklabels(colNamesData);
-xtickangle(45); ylabel('Valore medio'); title('Medie'); grid on;
+% --- Medie e Massimi interattivi nella stessa figura ---
+figure('Name','Medie e Massimi Interattivi','NumberTitle','off','Units','normalized','Position',[0 0 1 1]);
 
-% --- Massimi (pallini) ---
-nexttile; hold on;
-for i = 1:nCol
-    plot(i-0.2, maxFile1(i), 'o', 'MarkerFaceColor', colorFile1, 'MarkerEdgeColor', colorFile1, 'MarkerSize', 8);
-    plot(i+0.2, maxFile2(i), 'o', 'MarkerFaceColor', colorFile2, 'MarkerEdgeColor', colorFile2, 'MarkerSize', 8);
-end
-xlim([0 nCol+1]);
-xticks(1:nCol); xticklabels(colNamesData);
-xtickangle(45); ylabel('Valore massimo'); title('Massimi'); grid on;
+for idx = 1:nCol
+    clf; % pulisce la figura ad ogni step
 
-% --- FFT Potenza Motore ---
+    % Medie
+    subplot(2,1,1); hold on;
+    plot(1, mediaFile1(idx), 'o', 'MarkerFaceColor', colorFile1, 'MarkerEdgeColor', colorFile1, 'MarkerSize', 10);
+    plot(2, mediaFile2(idx), 'o', 'MarkerFaceColor', colorFile2, 'MarkerEdgeColor', colorFile2, 'MarkerSize', 10);
+    xlim([0 3]); set(gca,'XTick',[1 2],'XTickLabel',{'File1','File2'});
+    ylabel('Valore medio'); title(['Media: ' colNamesData{idx}]); grid on;
+
+    % Massimi
+    subplot(2,1,2); hold on;
+    plot(1, maxFile1(idx), 'o', 'MarkerFaceColor', colorFile1, 'MarkerEdgeColor', colorFile1, 'MarkerSize', 10);
+    plot(2, maxFile2(idx), 'o', 'MarkerFaceColor', colorFile2, 'MarkerEdgeColor', colorFile2, 'MarkerSize', 10);
+    xlim([0 3]); set(gca,'XTick',[1 2],'XTickLabel',{'File1','File2'});
+    ylabel('Valore massimo'); title(['Massimo: ' colNamesData{idx}]); grid on;
+
+    disp(['Premi Enter per il grafico successivo (Medie/Massimi: ' colNamesData{idx} ')...']);
+    pause;
+end
+
+% --- FFT interattiva (Potenza Motore) ---
 if ~isempty(idxPower)
-    nexttile([1 2]); % occupa due colonne
+    clf;
     plot(f,Yp1_mag,'b','LineWidth',1.2); hold on; 
     plot(f,Yp2_mag,'r','LineWidth',1.2);
-    grid on; xlabel('Frequenza [Hz]'); ylabel('Ampiezza'); 
-    title('FFT Potenza Motore'); legend('File1','File2');
+    xlabel('Frequenza [Hz]'); ylabel('Ampiezza'); title('FFT Potenza Motore'); legend('File1','File2'); grid on;
+    disp('Premi Enter per terminare la visualizzazione FFT...');
+    pause;
 end
-
 %% --- Statistiche dettagliate in Command Window ---
 disp('--- Statistiche dettagliate per ciascuna colonna ---');
 for idx = 1:nCol
