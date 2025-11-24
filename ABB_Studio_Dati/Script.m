@@ -36,7 +36,7 @@ colNames = {'Energia Totale','Potenza Motore','AL IRB4600_40', ...
 
 nTotalCols = length(colNames);
 
-colsToExclude = [5 7]; 
+colsToExclude = [5 7];
 colsToKeep = setdiff(2:nTotalCols, colsToExclude);
 colNamesData = colNames(colsToKeep - 1);
 nCol = length(colsToKeep);
@@ -55,224 +55,53 @@ for idx = 1:nCol
 end
 sgtitle('Confronto colonne tra file1 e file2');
 
-%% --- Calcolo medie e massimi ---
-mediaFile1 = zeros(1,nCol);
-mediaFile2 = zeros(1,nCol);
-maxFile1   = zeros(1,nCol);
-maxFile2   = zeros(1,nCol);
+
+%% --- BOXPLOT PULITI: togli outlier oltre i percentili ---
+figure('Name','Boxplot Puliti Confronto File1 vs File2','NumberTitle','off');
+
+lowerPerc = 5;   % percentile minimo
+upperPerc = 95;  % percentile massimo
 
 for idx = 1:nCol
     c = colsToKeep(idx);
-    col1 = file1(:,c);
-    col2 = file2(:,c);
-    
-    mediaFile1(idx) = mean(col1,'omitnan');
-    mediaFile2(idx) = mean(col2,'omitnan');
-    maxFile1(idx)   = max(col1,[],'omitnan');
-    maxFile2(idx)   = max(col2,[],'omitnan');
-end
 
-%% --- Grafici barre valori medi e massimi ---
-colorFile1 = [0 0.4470 0.7410];
-colorFile2 = [0.8500 0.3250 0.0980];
+    subplot(ceil(nCol/2),2,idx);
 
-energyIdx = 1;
-accIdx = 2:nCol;
+    dati1 = file1(:,c);
+    dati2 = file2(:,c);
 
-figure('Name','Energia: Media e Massimo','NumberTitle','off');
+    % Percentili normali
+    lowerP = 5; upperP = 95;
 
-subplot(2,1,1); hold on;
-plot(1, mediaFile1(energyIdx), 'o','MarkerFaceColor',colorFile1,'MarkerEdgeColor',colorFile1,'MarkerSize',10);
-plot(2, mediaFile2(energyIdx), 'o','MarkerFaceColor',colorFile2,'MarkerEdgeColor',colorFile2,'MarkerSize',10);
-xlim([0 3]); set(gca,'XTick',[1 2],'XTickLabel',{'File1','File2'});
-ylabel('Valore medio'); title('Energia Totale - Media'); grid on;
+    % Se colonna accelerazione IRB4600-20 → prendi tutto
+    if strcmp(colNamesData{idx}, 'AL IRB4600-20-IRB2600ID')
+        lowerP = 0;
+        upperP = 100;
+    end
 
-subplot(2,1,2); hold on;
-plot(1, maxFile1(energyIdx), 'o','MarkerFaceColor',colorFile1,'MarkerEdgeColor',colorFile1,'MarkerSize',10);
-plot(2, maxFile2(energyIdx), 'o','MarkerFaceColor',colorFile2,'MarkerEdgeColor',colorFile2,'MarkerSize',10);
-xlim([0 3]); set(gca,'XTick',[1 2],'XTickLabel',{'File1','File2'});
-ylabel('Valore massimo'); title('Energia Totale - Massimo'); grid on;
+    % Calcolo percentili
+    perc1 = prctile(dati1, [lowerP upperP]);
+    perc2 = prctile(dati2, [lowerP upperP]);
 
-%% --- Accelerazioni ---
-figure('Name','Accelerazioni: Media e Massimo','NumberTitle','off');
+    % Filtra dati entro percentili
+    dati1f = dati1(dati1 >= perc1(1) & dati1 <= perc1(2));
+    dati2f = dati2(dati2 >= perc2(1) & dati2 <= perc2(2));
 
-subplot(2,1,1); hold on;
-for i = 1:length(accIdx)
-    plot(2*i-1, mediaFile1(accIdx(i)), 'o','MarkerFaceColor',colorFile1,'MarkerEdgeColor',colorFile1,'MarkerSize',8);
-    plot(2*i,   mediaFile2(accIdx(i)), 'o','MarkerFaceColor',colorFile2,'MarkerEdgeColor',colorFile2,'MarkerSize',8);
-end
-xlim([0 2*length(accIdx)+1]);
-xticks(1:2:2*length(accIdx));
-xticklabels(colNamesData(accIdx));
-xtickangle(45); ylabel('Valore medio'); title('Medie'); grid on;
+    % Se quasi piatti, prendi tutti i dati
+    if isempty(dati1f), dati1f = dati1; end
+    if isempty(dati2f), dati2f = dati2; end
 
-subplot(2,1,2); hold on;
-for i = 1:length(accIdx)
-    plot(2*i-1, maxFile1(accIdx(i)), 'o','MarkerFaceColor',colorFile1,'MarkerEdgeColor',colorFile1,'MarkerSize',8);
-    plot(2*i,   maxFile2(accIdx(i)), 'o','MarkerFaceColor',colorFile2,'MarkerEdgeColor',colorFile2,'MarkerSize',8);
-end
-xlim([0 2*length(accIdx)+1]);
-xticks(1:2:2*length(accIdx));
-xticklabels(colNamesData(accIdx));
-xtickangle(45); ylabel('Valore massimo'); title('Massimi'); grid on;
+    % Concatenazione verticale e gruppi
+    dati_comb = [dati1f; dati2f];
+    gruppi = [repmat({'File1'}, length(dati1f),1); repmat({'File2'}, length(dati2f),1)];
 
-%% --- Picchi e correlazioni ---
-fprintf('\n--- Correlazioni File1 vs File2 ---\n');
-figure('Name','Picchi Massimi','NumberTitle','off');
+    % Boxplot
+    boxplot(dati_comb, gruppi, 'whisker',1.5,'Symbol','');
 
-for idx = 1:nCol
-    c = colsToKeep(idx);
-    col1 = file1(:,c); col2 = file2(:,c);
-
-    thresh1 = mean(col1,'omitnan') + std(col1,'omitnan');
-    thresh2 = mean(col2,'omitnan') + std(col2,'omitnan');
-
-    if any(col1 > thresh1), [pks1, locs1] = findpeaks(col1,'MinPeakHeight',thresh1); else pks1=[]; locs1=[]; end
-    if any(col2 > thresh2), [pks2, locs2] = findpeaks(col2,'MinPeakHeight',thresh2); else pks2=[]; locs2=[]; end
-
-    subplot(ceil(nCol/2),2,idx); hold on;
-    plot(tempo,col1,'-b'); if ~isempty(pks1), plot(tempo(locs1),pks1,'ob','MarkerFaceColor','b'); end
-    plot(tempo,col2,'-r'); if ~isempty(pks2), plot(tempo(locs2),pks2,'or','MarkerFaceColor','r'); end
-    title(colNamesData{idx}); grid on;
-
-    R = corr(col1,col2,'Rows','complete'); if isempty(R) || isnan(R), R=0; end
-    fprintf('%s: Corr = %.3f\n', colNamesData{idx}, R);
-end
-sgtitle('Picchi Massimi per ciascuna colonna');
-
-%% --- Heatmap delle accelerazioni (File1 e File2) ---
-figure('Name','Heatmap File1','NumberTitle','off');
-imagesc(tempo, 1:nCol, file1(:,colsToKeep)');
-colorbar;
-yticks(1:nCol); yticklabels(colNamesData);
-xlabel('Tempo'); ylabel('Colonna'); title('Heatmap File1');
-
-figure('Name','Heatmap File2','NumberTitle','off');
-imagesc(tempo, 1:nCol, file2(:,colsToKeep)');
-colorbar;
-yticks(1:nCol); yticklabels(colNamesData);
-xlabel('Tempo'); ylabel('Colonna'); title('Heatmap File2');
-
-%% --- FFT su POTENZA MOTORE (File1 e File2) ---
-idxPower = find(strcmp(colNamesData,'Potenza Motore'));
-
-if ~isempty(idxPower)
-    colPow = colsToKeep(idxPower);
-
-    % Estrai dati e rimuovi offset
-    p1 = detrend(file1(:,colPow));
-    p2 = detrend(file2(:,colPow));
-
-    % Lunghezza e frequenze
-    L = length(p1);
-    Fs = 1/mean(diff(tempo));
-    f = (0:floor(L/2))*(Fs/L);
-
-    % FFT
-    Yp1 = fft(p1);
-    Yp2 = fft(p2);
-
-    Yp1_mag = abs(Yp1(1:length(f)));
-    Yp2_mag = abs(Yp2(1:length(f)));
-
-    % Plot
-    figure('Name','FFT Potenza Motore','NumberTitle','off');
-    plot(f, Yp1_mag,'b','LineWidth',1.2); hold on;
-    plot(f, Yp2_mag,'r','LineWidth',1.2);
+    title(['Boxplot - ' colNamesData{idx}]);
+    ylabel('Valori');
     grid on;
-    xlabel('Frequenza [Hz]');
-    ylabel('Ampiezza');
-    title('FFT Potenza Motore');
-    legend('File1','File2');
 end
 
-%% --- Dashboard interattivo a step ---
-figure('Name','Dashboard Interattivo','NumberTitle','off','Units','normalized','Position',[0 0 1 1]);
 
-for idx = 1:nCol
-    clf; % pulisce la figura ad ogni step
-    plot(tempo, file1(:,colsToKeep(idx)), '-o', 'LineWidth', 1.2); hold on;
-    plot(tempo, file2(:,colsToKeep(idx)), '-x', 'LineWidth', 1.2);
-    xlabel('Tempo'); ylabel('Valore');
-    title(['Serie Temporale: ' colNamesData{idx}]);
-    legend('File1','File2','Location','best');
-    grid on;
-    
-    % Attende pressione tasto Enter
-    disp(['Premi Enter per vedere il grafico successivo (' colNamesData{idx} ')...']);
-    pause; % attende input da tastiera
-end
-
-% --- Medie e Massimi interattivi nella stessa figura ---
-figure('Name','Medie e Massimi Interattivi','NumberTitle','off','Units','normalized','Position',[0 0 1 1]);
-
-for idx = 1:nCol
-    clf; % pulisce la figura ad ogni step
-
-    % Medie
-    subplot(2,1,1); hold on;
-    plot(1, mediaFile1(idx), 'o', 'MarkerFaceColor', colorFile1, 'MarkerEdgeColor', colorFile1, 'MarkerSize', 10);
-    plot(2, mediaFile2(idx), 'o', 'MarkerFaceColor', colorFile2, 'MarkerEdgeColor', colorFile2, 'MarkerSize', 10);
-    xlim([0 3]); set(gca,'XTick',[1 2],'XTickLabel',{'File1','File2'});
-    ylabel('Valore medio'); title(['Media: ' colNamesData{idx}]); grid on;
-
-    % Massimi
-    subplot(2,1,2); hold on;
-    plot(1, maxFile1(idx), 'o', 'MarkerFaceColor', colorFile1, 'MarkerEdgeColor', colorFile1, 'MarkerSize', 10);
-    plot(2, maxFile2(idx), 'o', 'MarkerFaceColor', colorFile2, 'MarkerEdgeColor', colorFile2, 'MarkerSize', 10);
-    xlim([0 3]); set(gca,'XTick',[1 2],'XTickLabel',{'File1','File2'});
-    ylabel('Valore massimo'); title(['Massimo: ' colNamesData{idx}]); grid on;
-
-    disp(['Premi Enter per il grafico successivo (Medie/Massimi: ' colNamesData{idx} ')...']);
-    pause;
-end
-
-% --- FFT interattiva (Potenza Motore) ---
-if ~isempty(idxPower)
-    clf;
-    plot(f,Yp1_mag,'b','LineWidth',1.2); hold on; 
-    plot(f,Yp2_mag,'r','LineWidth',1.2);
-    xlabel('Frequenza [Hz]'); ylabel('Ampiezza'); title('FFT Potenza Motore'); legend('File1','File2'); grid on;
-    disp('Premi Enter per terminare la visualizzazione FFT...');
-    pause;
-end
-%% --- Statistiche dettagliate in Command Window ---
-disp('--- Statistiche dettagliate per ciascuna colonna ---');
-for idx = 1:nCol
-    c = colsToKeep(idx);
-    col1 = file1(:,c);
-    col2 = file2(:,c);
-
-    fprintf('\nColonna: %s\n', colNamesData{idx});
-    fprintf('File1: Media=%.3f, Max=%.3f, Min=%.3f, Std=%.3f\n', ...
-        mean(col1,'omitnan'), max(col1,[],'omitnan'), min(col1), std(col1,'omitnan'));
-    fprintf('File2: Media=%.3f, Max=%.3f, Min=%.3f, Std=%.3f\n', ...
-        mean(col2,'omitnan'), max(col2,[],'omitnan'), min(col2), std(col2,'omitnan'));
-end
-
-%% --- Tabella riepilogativa delle statistiche e correlazioni ---
-statTable = table();
-
-for idx = 1:nCol
-    c = colsToKeep(idx);
-    col1 = file1(:,c);
-    col2 = file2(:,c);
-
-    % Calcolo statistiche
-    media1 = mean(col1,'omitnan');  media2 = mean(col2,'omitnan');
-    max1   = max(col1,[],'omitnan'); max2   = max(col2,[],'omitnan');
-    min1   = min(col1);              min2   = min(col2);
-    std1   = std(col1,'omitnan');    std2   = std(col2,'omitnan');
-
-    % Correlazione
-    R = corr(col1,col2,'Rows','complete'); 
-    if isempty(R) || isnan(R), R = 0; end
-
-    % Aggiungi riga alla tabella
-    statTable = [statTable; table({colNamesData{idx}}, media1, media2, max1, max2, min1, min2, std1, std2, R, ...
-        'VariableNames', {'Colonna','Media_File1','Media_File2','Max_File1','Max_File2','Min_File1','Min_File2','Std_File1','Std_File2','Correlazione'})];
-end
-
-% Mostra la tabella in una finestra interattiva
-fStats = uifigure('Name','Statistiche e Correlazioni','Position',[200 200 900 400]);
-uit = uitable(fStats,'Data',statTable,'Position',[10 10 880 380]);
+sgtitle(['Boxplot Puliti (' num2str(lowerPerc) '-' num2str(upperPerc) ' percentile)']);
