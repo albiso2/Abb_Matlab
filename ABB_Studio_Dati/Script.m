@@ -133,59 +133,107 @@ accCols = nCol-1:nCol;  % ultime 2 colonne
 accNames = colNamesData(accCols);
 window_size = 1948;  % circa 60 secondi
 
-figure('Name','Zone di accelerazione rapida','NumberTitle','off');
+% ====== NUOVO: divisione in finestre da 500 secondi ======
+window_sec = 500;  
+t_min = min([tempo1(1) tempo2(1)]);
+t_max = max([tempo1(end) tempo2(end)]);
+edges = t_min:window_sec:t_max;  
+nSegments = length(edges)-1;
+
+% ====== Precalcolo filtraggio e derivate (come il tuo codice) ======
+dati1_all = cell(1,length(accCols));
+dati2_all = cell(1,length(accCols));
+deriv1_all = cell(1,length(accCols));
+deriv2_all = cell(1,length(accCols));
+thresh1_all = zeros(1,length(accCols));
+thresh2_all = zeros(1,length(accCols));
 
 for k = 1:length(accCols)
     c = accCols(k);
-    subplot(length(accCols),1,k);
 
-    % --- Dati filtrati (1°-99° percentile)
-    dati1 = file1(:,c); dati2 = file2(:,c);
-    datiAll = [dati1; dati2];
+    d1 = file1(:,c); d2 = file2(:,c);
+    datiAll = [d1; d2];
     lowerLim = prctile(datiAll,1);
     upperLim = prctile(datiAll,99);
-    dati1(dati1 < lowerLim | dati1 > upperLim) = NaN;
-    dati2(dati2 < lowerLim | dati2 > upperLim) = NaN;
 
-    % --- Derivata media in finestra mobile
-    deriv1 = movmean([0; diff(dati1)], window_size,'omitnan');  
-    deriv2 = movmean([0; diff(dati2)], window_size,'omitnan');  
+    d1(d1 < lowerLim | d1 > upperLim) = NaN;
+    d2(d2 < lowerLim | d2 > upperLim) = NaN;
 
-    % --- Soglia picchi > 3 std
+    deriv1 = movmean([0; diff(d1)], window_size, 'omitnan');
+    deriv2 = movmean([0; diff(d2)], window_size, 'omitnan');
+
     thresh1 = 3*nanstd(deriv1);
     thresh2 = 3*nanstd(deriv2);
 
-    fast1 = abs(deriv1) > thresh1;
-    fast2 = abs(deriv2) > thresh2;
-
-    % --- Plot dati principali
-    t1_valid = tempo1; t2_valid = tempo2;
-    hold on;
-    h1 = plot(t1_valid, dati1, 'b', 'LineWidth', 1.2); 
-    h2 = plot(t2_valid, dati2, 'r', 'LineWidth', 1.2);
-
-    % --- Evidenzia i picchi con bande trasparenti più visibili
-    ylimVals = ylim;
-    for i=1:length(fast1)
-        if fast1(i)
-            patch([t1_valid(i) t1_valid(i) t1_valid(i+1) t1_valid(i+1)],...
-                  [ylimVals(1) ylimVals(2) ylimVals(2) ylimVals(1)],...
-                  'c','FaceAlpha',0.6,'EdgeColor','c');
-        end
-    end
-    for i=1:length(fast2)
-        if fast2(i)
-            patch([t2_valid(i) t2_valid(i) t2_valid(i+1) t2_valid(i+1)],...
-                  [ylimVals(1) ylimVals(2) ylimVals(2) ylimVals(1)],...
-                  'm','FaceAlpha',0.6,'EdgeColor','m');
-        end
-    end
-
-    xlabel('Tempo [s]'); ylabel('Accelerazione [mm/s^2]');
-
-    legend([h1 h2], {'Cella Lineare','Cella U'}, 'Location','best');
-    title(['Accelerazione rapida - ' accNames{k}]);
-    grid on;
+    dati1_all{k} = d1;
+    dati2_all{k} = d2;
+    deriv1_all{k} = deriv1;
+    deriv2_all{k} = deriv2;
+    thresh1_all(k) = thresh1;
+    thresh2_all(k) = thresh2;
 end
 
-sgtitle('Zone di accelerazione rapida (finestra ~60s, soglia 3 std)');
+
+% ====== NUOVO: plot suddiviso in finestre ======
+for seg = 1:nSegments
+
+    t_start = edges(seg);
+    t_end   = edges(seg+1);
+
+    figure('Name', sprintf('Accelerazioni rapide - Finestra %d (%.0f-%.0f s)', ...
+           seg, t_start, t_end), 'NumberTitle', 'off');
+
+    for k = 1:length(accCols)
+
+        d1 = dati1_all{k};
+        d2 = dati2_all{k};
+        deriv1 = deriv1_all{k};
+        deriv2 = deriv2_all{k};
+        thresh1 = thresh1_all(k);
+        thresh2 = thresh2_all(k);
+
+        fast1 = abs(deriv1) > thresh1;
+        fast2 = abs(deriv2) > thresh2;
+
+        subplot(length(accCols),1,k); hold on;
+
+        % -------- Filtra indici nella finestra temporale --------
+        idx1 = tempo1 >= t_start & tempo1 <= t_end;
+        idx2 = tempo2 >= t_start & tempo2 <= t_end;
+
+        % Plot segnali
+        h1 = plot(tempo1(idx1), d1(idx1), 'b', 'LineWidth', 1.2);
+        h2 = plot(tempo2(idx2), d2(idx2), 'r', 'LineWidth', 1.2);
+
+        % Patch per fast1
+        ylimVals = ylim;
+        for i = find(idx1)'
+            if fast1(i) && i < length(tempo1)
+                if tempo1(i) >= t_start && tempo1(i+1) <= t_end
+                    patch([tempo1(i) tempo1(i+1) tempo1(i+1) tempo1(i)], ...
+                          [ylimVals(1) ylimVals(1) ylimVals(2) ylimVals(2)], ...
+                          'c', 'FaceAlpha', 0.6, 'EdgeColor','c');
+                end
+            end
+        end
+
+        % Patch per fast2
+        for i = find(idx2)'
+            if fast2(i) && i < length(tempo2)
+                if tempo2(i) >= t_start && tempo2(i+1) <= t_end
+                    patch([tempo2(i) tempo2(i+1) tempo2(i+1) tempo2(i)], ...
+                          [ylimVals(1) ylimVals(1) ylimVals(2) ylimVals(2)], ...
+                          'm', 'FaceAlpha', 0.6, 'EdgeColor','m');
+                end
+            end
+        end
+
+        xlabel('Tempo [s]');
+        ylabel('Accelerazione [mm/s^2]');
+        title(sprintf('%s (%.0f–%.0f s)', accNames{k}, t_start, t_end));
+        legend([h1 h2], {'Cella Lineare','Cella U'},'Location','best');
+        grid on;
+    end
+end
+
+sgtitle('Zone di accelerazione rapida (finestre da 500 s)');
