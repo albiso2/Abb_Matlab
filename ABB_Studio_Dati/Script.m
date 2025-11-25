@@ -116,3 +116,57 @@ for idx = 1:nCol
 end
 
 sgtitle('Boxplot basati su statistiche (quartili e media, valori estremi filtrati)');
+
+%% ===================================================================
+%% 2) BOXPLOT CON WHISKER AL MIN E MAX REALE (Dati filtrati per anomalie)
+%% ===================================================================
+
+figure('Name','Boxplot corretto con whisker al min/max','NumberTitle','off');
+
+for idx = 1:nCol
+    c = colsToKeep(idx);
+    subplot(ceil(nCol/2),2,idx);
+
+    dati1 = file1(:,c);
+    dati2 = file2(:,c);
+
+    % --- Filtra anomalie veramente estreme per tutte le colonne ---
+    % Definiamo come valori estremi quelli oltre i percentili 0.5 e 99.5
+    p_lower = prctile([dati1; dati2],0.5);
+    p_upper = prctile([dati1; dati2],99.5);
+    dati1_filt = dati1;
+    dati2_filt = dati2;
+    dati1_filt(dati1 < p_lower | dati1 > p_upper) = NaN;
+    dati2_filt(dati2 < p_lower | dati2 > p_upper) = NaN;
+
+    % Rimuove eventuali NaN dopo filtraggio
+    dati1_filt = dati1_filt(~isnan(dati1_filt));
+    dati2_filt = dati2_filt(~isnan(dati2_filt));
+
+    % Concatenazione dati e definizione gruppi
+    dati_comb = [dati1_filt; dati2_filt];
+    gruppi = [repmat({'File1'}, length(dati1_filt),1); repmat({'File2'}, length(dati2_filt),1)];
+
+    % Calcolo statistiche
+    Q1 = prctile(dati_comb,25);
+    med = median(dati_comb);
+    Q3 = prctile(dati_comb,75);
+    min_val = min(dati_comb);
+    max_val = max(dati_comb);
+
+    fprintf('Colonna: %s\n', colNamesData{idx});
+    fprintf('  File1 -> Mean: %.3f, Q25: %.3f, Median: %.3f, Q75: %.3f, Min: %.3f, Max: %.3f\n', ...
+            mean(dati1_filt), prctile(dati1_filt,25), median(dati1_filt), prctile(dati1_filt,75), min(dati1_filt), max(dati1_filt));
+    fprintf('  File2 -> Mean: %.3f, Q25: %.3f, Median: %.3f, Q75: %.3f, Min: %.3f, Max: %.3f\n', ...
+            mean(dati2_filt), prctile(dati2_filt,25), median(dati2_filt), prctile(dati2_filt,75), min(dati2_filt), max(dati2_filt));
+
+    % Boxplot senza outlier, whisker al min/max filtrati
+    boxplot(dati_comb, gruppi, 'whisker', Inf, 'Symbol','');
+
+    title(['Boxplot - ' colNamesData{idx}]);
+    ylabel('Valori');
+    grid on;
+end
+
+sgtitle('Boxplot con whisker al min/max filtrati per anomalie estreme');
+
