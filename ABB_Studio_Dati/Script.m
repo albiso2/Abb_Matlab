@@ -29,33 +29,32 @@ colsToKeep = 2:size(file1,2);
 nCol = length(colsToKeep);
 colNamesData = colNames(colsToKeep);
 
-%% --- Allineamento sui tempi comuni per tutte le colonne ---
-[tempi_comuni, idx1, idx2] = intersect(tempo1, tempo2);
-file1_common = file1(idx1,:);
-file2_common = file2(idx2,:);
-tempo_common = tempi_comuni;
+%% ===================================================================
+%% 1) SERIE TEMPORALI SU TEMPI ORIGINALI (NESSUNA INTERSEZIONE)
+%% ===================================================================
 
-%% --- Plot serie temporali ---
 figure('Name','Confronto Serie Temporali','NumberTitle','off');
+
 for idx = 1:nCol
     c = colsToKeep(idx);
     subplot(ceil(nCol/2),2,idx);
 
-    % Tutte le colonne: plot sui tempi comuni
-    plot(tempo_common, file1_common(:,c), '-o','LineWidth',1); hold on;
-    plot(tempo_common, file2_common(:,c), '-x','LineWidth',1);
+    plot(tempo1, file1(:,c), '-o', 'LineWidth', 1); hold on;
+    plot(tempo2, file2(:,c), '-x', 'LineWidth', 1);
 
     xlabel('Tempo'); ylabel('Valore');
     legend('File1','File2','Location','best');
     title(colNamesData{idx});
     grid on;
 end
-sgtitle('Confronto colonne tra file1 e file2');
+sgtitle('Confronto colonne tra file1 e file2 (Tempo originale)');
 
-%% --- Boxplot puliti (percentili 5-95 per tutte le colonne) ---
-figure('Name','Boxplot Puliti Confronto File1 vs File2','NumberTitle','off');
-lowerPerc = 5;
-upperPerc = 95;
+
+%% ===================================================================
+%% 2) BOXPLOT SENZA OUTLIER (WHISKERS STANDARD IQR)
+%% ===================================================================
+
+figure('Name','Boxplot Senza Outlier - Confronto File1 vs File2','NumberTitle','off');
 
 for idx = 1:nCol
     c = colsToKeep(idx);
@@ -64,22 +63,31 @@ for idx = 1:nCol
     dati1 = file1(:,c);
     dati2 = file2(:,c);
 
-    % Filtra percentili 5-95 per tutte le colonne, nessuna eccezione
-    perc1 = prctile(dati1, [lowerPerc upperPerc]);
-    perc2 = prctile(dati2, [lowerPerc upperPerc]);
+    % --- Rimozione outlier tramite IQR ---
+    Q1_1 = prctile(dati1,25);
+    Q3_1 = prctile(dati1,75);
+    IQR1 = Q3_1 - Q1_1;
+    lower1 = Q1_1 - 1.5*IQR1;
+    upper1 = Q3_1 + 1.5*IQR1;
+    dati1_clean = dati1(dati1 >= lower1 & dati1 <= upper1);
 
-    dati1f = dati1(dati1 >= perc1(1) & dati1 <= perc1(2));
-    dati2f = dati2(dati2 >= perc2(1) & dati2 <= perc2(2));
+    Q1_2 = prctile(dati2,25);
+    Q3_2 = prctile(dati2,75);
+    IQR2 = Q3_2 - Q1_2;
+    lower2 = Q1_2 - 1.5*IQR2;
+    upper2 = Q3_2 + 1.5*IQR2;
+    dati2_clean = dati2(dati2 >= lower2 & dati2 <= upper2);
 
-    if isempty(dati1f), dati1f = dati1; end
-    if isempty(dati2f), dati2f = dati2; end
+    % --- Prepara dati per boxplot ---
+    dati_comb = [dati1_clean; dati2_clean];
+    gruppi = [repmat({'File1'}, length(dati1_clean),1); 
+              repmat({'File2'}, length(dati2_clean),1)];
 
-    dati_comb = [dati1f; dati2f];
-    gruppi = [repmat({'File1'}, length(dati1f),1); repmat({'File2'}, length(dati2f),1)];
-
-    boxplot(dati_comb, gruppi, 'whisker',1.5,'Symbol','');
+    % --- Boxplot senza simboli dei outlier (perché già rimossi) ---
+    boxplot(dati_comb, gruppi, 'whisker',1.5, 'Symbol','');
     title(['Boxplot - ' colNamesData{idx}]);
     ylabel('Valori');
     grid on;
 end
-sgtitle(['Boxplot Puliti (' num2str(lowerPerc) '-' num2str(upperPerc) ' percentile)']);
+
+sgtitle('Boxplot senza outlier (Whiskers IQR)');
