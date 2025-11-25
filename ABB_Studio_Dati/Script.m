@@ -169,4 +169,69 @@ for idx = 1:nCol
 end
 
 sgtitle('Boxplot con whisker al min/max filtrati per anomalie estreme');
+%% ===================================================================
+%% ZONE DI VARIAZIONE RAPIDA DELLE ACCELERAZIONI (WINDOW ~60s)
+%% ===================================================================
 
+accCols = nCol-1:nCol;  % ultime 2 colonne
+accNames = colNamesData(accCols);
+window_size = 1948;  % circa 60 secondi
+
+figure('Name','Zone di accelerazione rapida','NumberTitle','off');
+
+for k = 1:length(accCols)
+    c = accCols(k);
+    subplot(length(accCols),1,k);
+
+    % --- Dati filtrati (tolgo valori estremi 1-99 percentile)
+    dati1 = file1(:,c); dati2 = file2(:,c);
+    datiAll = [dati1; dati2];
+    lowerLim = prctile(datiAll,1);
+    upperLim = prctile(datiAll,99);
+    dati1(dati1 < lowerLim | dati1 > upperLim) = NaN;
+    dati2(dati2 < lowerLim | dati2 > upperLim) = NaN;
+
+    % --- Calcolo derivata media in finestra mobile
+    deriv1 = movmean([0; diff(dati1)], window_size,'omitnan');  
+    deriv2 = movmean([0; diff(dati2)], window_size,'omitnan');  
+
+    % --- Soglia rispetto alla media
+    thresh1 = 3*nanstd(deriv1); % picchi > 3 deviazioni standard
+    thresh2 = 3*nanstd(deriv2);
+
+    fast1 = abs(deriv1) > thresh1;
+    fast2 = abs(deriv2) > thresh2;
+
+    % --- Plot dei dati principali
+    t1_valid = tempo1; t2_valid = tempo2;
+    hold on;
+    h1 = plot(t1_valid, dati1, 'b', 'LineWidth', 1.2); 
+    h2 = plot(t2_valid, dati2, 'r', 'LineWidth', 1.2);
+
+    % --- Evidenzia i picchi con bande più visibili
+    ylimVals = ylim;
+    for i=1:length(fast1)
+        if fast1(i)
+            patch([t1_valid(i) t1_valid(i) t1_valid(i+1) t1_valid(i+1)],...
+                  [ylimVals(1) ylimVals(2) ylimVals(2) ylimVals(1)],...
+                  'c','FaceAlpha',0.6,'EdgeColor','c');
+        end
+    end
+    for i=1:length(fast2)
+        if fast2(i)
+            patch([t2_valid(i) t2_valid(i) t2_valid(i+1) t2_valid(i+1)],...
+                  [ylimVals(1) ylimVals(2) ylimVals(2) ylimVals(1)],...
+                  'm','FaceAlpha',0.6,'EdgeColor','m');
+        end
+    end
+
+    xlabel('Tempo [s]'); ylabel('Accelerazione');
+
+    % --- Legenda aggiornata
+    legend([h1 h2], {'File1','File2'}, 'Location','best');
+
+    title(['Accelerazione rapida - ' accNames{k}]);
+    grid on;
+end
+
+sgtitle('Zone di accelerazione rapida (finestra ~60s, soglia 3 std)');
