@@ -58,8 +58,22 @@ for idx = 1:nCol
     legend('Cella Lineare','Cella U','Location','best');
     title(colNamesData{idx});
     grid on;
+
+    % CONTEGGIO SUPERAMENTI SOGLIA PER LA POTENZA
+    if idx == 2   % <-- colonna 3 = Potenza
+        soglia = 3000;
+
+        count1 = sum(dati1 > soglia);
+        count2 = sum(dati2 > soglia);
+
+        fprintf('\n=== SUPERAMENTI SOGLIA POTENZA (>%d W) ===\n', soglia);
+        fprintf('Cella Lineare: %d volte\n', count1);
+        fprintf('Cella U      : %d volte\n\n', count2);
+    end
 end
+
 sgtitle('Confronto colonne tra Cella Lineare e Cella U');
+
 
 %% ===================================================================
 %% 2) BOXPLOT CON WHISKER AL MIN E MAX REALE (solo Energia e Potenza)
