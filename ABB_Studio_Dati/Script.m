@@ -148,6 +148,26 @@ end
 
 sgtitle('Boxplot Energia & Potenza');
 
+% ==========================================================
+% SUPERAMENTI SOGLIA SOLO PER LA POTENZA - STAMPA BELLA
+% ==========================================================
+if strcmp(colNames{c}, 'Potenza Motore')
+    soglia = 3000;
+    count1 = sum(dati1 > soglia);
+    count2 = sum(dati2 > soglia);
+
+    % Stampa su Command Window in stile tabellare
+    fprintf('\n');
+    fprintf('╔═══════════════════════════════════════════╗\n');
+    fprintf('║        SUPERAMENTI SOGLIA POTENZA        ║\n');
+    fprintf('╠═════════════════════╦═══════════════════╣\n');
+    fprintf('║ Soglia: %4d W       ║                   ║\n', soglia);
+    fprintf('╠═════════════════════╬═══════════════════╣\n');
+    fprintf('║ Cella Lineare       ║ %5d volte        ║\n', count1);
+    fprintf('║ Cella U             ║ %5d volte        ║\n', count2);
+    fprintf('╚═════════════════════╩═══════════════════╝\n\n');
+end
+
 %% ===================================================================
 %% 3) ZONE DI VARIAZIONE RAPIDA DELLE ACCELERAZIONI (WINDOW ~60s)
 %% ===================================================================
