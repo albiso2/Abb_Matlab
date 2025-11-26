@@ -96,14 +96,14 @@ for idx = 1:length(colsBox)
     max1  = max(dati1);    max2  = max(dati2);
 
     % offset per evitare sovrapposizioni
-    off_mean = 0.03 * (max([dati1; dati2]) - min([dati1; dati2]));
-    off_max  = 0.05 * (max([dati1; dati2]) - min([dati1; dati2]));
+    off_mean = 0.01 * (max([dati1; dati2]) - min([dati1; dati2]));
+    off_max  = 0.03 * (max([dati1; dati2]) - min([dati1; dati2]));
 
     % ================================
     %   LINEE DI MEDIA E MASSIMO
     % ================================
-    plot([0.9 1.1], [mean1 mean1], 'b-', 'LineWidth', 1.8);
-    plot([1.9 2.1], [mean2 mean2], 'b-', 'LineWidth', 1.8);
+    % plot([0.9 1.1], [mean1 mean1], 'b-', 'LineWidth', 1.8);
+    % plot([1.9 2.1], [mean2 mean2], 'b-', 'LineWidth', 1.8);
 
     plot([0.9 1.1], [max1 max1], 'r-', 'LineWidth', 1.8);
     plot([1.9 2.1], [max2 max2], 'r-', 'LineWidth', 1.8);
@@ -111,13 +111,13 @@ for idx = 1:length(colsBox)
     % ================================
     %   ETICHETTE
     % ================================
-    text(1, mean1 + off_mean, sprintf('Mean = %.1f', mean1), ...
-        'Color','b','FontSize',10,'FontWeight','bold', ...
-        'HorizontalAlignment','left');
-
-    text(2, mean2 + off_mean, sprintf('Mean = %.1f', mean2), ...
-        'Color','b','FontSize',10,'FontWeight','bold', ...
-        'HorizontalAlignment','left');
+    % text(1, mean1 + off_mean, sprintf('Mean = %.1f', mean1), ...
+    %     'Color','b','FontSize',10,'FontWeight','bold', ...
+    %     'HorizontalAlignment','left');
+    % 
+    % text(2, mean2 + off_mean, sprintf('Mean = %.1f', mean2), ...
+    %     'Color','b','FontSize',10,'FontWeight','bold', ...
+    %     'HorizontalAlignment','left');
 
     text(1, max1 + off_max, sprintf('Max = %.1f', max1), ...
         'Color','r','FontSize',10,'FontWeight','bold', ...
@@ -127,23 +127,23 @@ for idx = 1:length(colsBox)
         'Color','r','FontSize',10,'FontWeight','bold', ...
         'HorizontalAlignment','left');
 
-    % ================================
-    %  RIPRISTINO PUNTI >3000W
-    % ================================
-    if strcmp(colNames{c}, 'Potenza Motore')
-        soglia = 3000;
-
-        idx1 = find(dati1 > soglia);
-        idx2 = find(dati2 > soglia);
-
-        scatter(ones(size(idx1))*1, dati1(idx1), 20, 'r', 'filled');
-        scatter(ones(size(idx2))*2, dati2(idx2), 20, 'r', 'filled');
-    end
-
-    ylabel(yLabelsBox{idx});
-    xlabel('Gruppo');
-    title(colNames{c});
-    grid on;
+%     % ================================
+%     %  RIPRISTINO PUNTI >3000W
+%     % ================================
+%     if strcmp(colNames{c}, 'Potenza Motore')
+%         soglia = 3000;
+% 
+%         idx1 = find(dati1 > soglia);
+%         idx2 = find(dati2 > soglia);
+% 
+%         scatter(ones(size(idx1))*1, dati1(idx1), 20, 'r', 'filled');
+%         scatter(ones(size(idx2))*2, dati2(idx2), 20, 'r', 'filled');
+%     end
+% 
+%     ylabel(yLabelsBox{idx});
+%     xlabel('Gruppo');
+%     title(colNames{c});
+%     grid on;
 end
 
 sgtitle('Boxplot Energia & Potenza');
